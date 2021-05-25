@@ -2,12 +2,9 @@
 <?php
 
 /*
- * TODO
- * - Régler orientation des pièces
- * - Ajouter les trous de dowel au maketongue()
- * - download button
- * - cleanup code
- * - cleanup frontend
+ TODO
+ - download button
+ - cleanup frontend
  */
 
 $spacing = 10;
@@ -20,13 +17,14 @@ $bsize = $_GET['BitSize']/10;
 $langlen = $dowel * 5;
 $langhei = $mat + 2 * $dowel ;
 
-// superficie des rectangles
+// getting pieces superficies
 $order = array(
   "bot" => $len * $wid,
   "c1" => 2*($len*$hei),
   "c2" => 2*($wid*$hei)
 );
-// ils sont triés par leur superficie
+
+// sort them
 arsort($order);
 foreach ($order as $key=>$val) {
   if ($key == "bot") {
@@ -36,37 +34,39 @@ foreach ($order as $key=>$val) {
   } else {
     $order[$key] = array($wid,$hei);
   }
-  rsort($order[$key]);
 }
 $c1=array_keys($order)[0];
 $c2=array_keys($order)[1];
 $c3=array_keys($order)[2];
 
-function maketongue($side="horizontal", $way=1) {
-  global $langhei,$langlen,$dowel;
-  $langheight = $langhei*$way;
-  $langlength = $langlen*$way;
-  if ($side=="horizontal") {
-    return "
-      q 0,".$langheight." ".-($langlength*.4).",".$langheight." 
-      l ".-($langlength*.2).",0 
-      q ".-($langlength*.4).",0 ".-($langlength*.4).",".-$langheight."";
-  } else {
-    return "
-      q ".$langheight.",0 ".$langheight.",".($langlength*.4)." 
-      l 0,".($langlength*.2)."
-      q 0,".($langlength*.4)." ".-$langheight.",".($langlength*.4)."";
+function isHorizontal($val) {
+  if ($val=="horizontal") {
+    return 1;
   }
 }
 
-function makehole($side="horizontal") {
-  global $mat, $langlen;
-  if ($side=="horizontal") {
+function makehole($side="horizontal", $way=1) {
+  global $mat, $langlen, $dowel;
+  if (isHorizontal($side)) {
     return "
       l $langlen,0
       l 0,$mat
       l ".-$langlen.",0
       l 0,".-$mat."";
+  } else if ($side=="roundh") {
+    return "
+      q ".($dowel/2).",0 ".($dowel/2).",".($dowel/2)."
+      q 0,".($dowel/2)." ".-($dowel/2).",".($dowel/2)."
+      q ".-($dowel/2).",0 ".-($dowel/2).",".-($dowel/2)."
+      q 0,".-($dowel/2)." ".($dowel/2).",".-($dowel/2)."
+      ";
+  } else if ($side=="roundv") {
+    return "
+      q 0,".-($dowel/2)*$way." ".-($dowel/2)*$way.",".-($dowel/2)*$way."
+      q ".-($dowel/2)*$way.",0 ".-($dowel/2)*$way.",".($dowel/2)*$way."
+      q 0,".($dowel/2)*$way." ".($dowel/2)*$way.",".($dowel/2)*$way."
+      q ".($dowel/2)*$way.",0 ".($dowel/2)*$way.",".-($dowel/2)*$way."
+      ";
   } else {
     return "
       l ".$mat.",0
@@ -76,69 +76,132 @@ function makehole($side="horizontal") {
   }
 }
 
+function maketongue($side="horizontal", $way=1) {
+  global $langhei,$langlen,$dowel;
+  $langheight = $langhei*$way;
+  $langlength = $langlen*$way;
+  if (isHorizontal($side)) {
+    return "
+      q 0,".$langheight." ".-($langlength*.4).",".$langheight." 
+      l ".-($langlength*.2).",0 
+      q ".-($langlength*.4).",0 ".-($langlength*.4).",".-$langheight."
+      m ".($langlength/2).",".($dowel)*$way."
+      ".makehole("roundh")."
+      m ".-($langlength/2).",".-($dowel)*$way."
+      ";
+  } else {
+    return "
+      q ".$langheight.",0 ".$langheight.",".($langlength*.4)." 
+      l 0,".($langlength*.2)."
+      q 0,".($langlength*.4)." ".-$langheight.",".($langlength*.4)."
+      m ".($dowel)*$way.",".-($langlength/2)."
+      ".makehole("roundv",-$way)."
+      m ".-($dowel)*$way.",".($langlength/2)."
+      ";
+  }
+}
+
+function makeTonguedSide($len,$side="horizontal",$way=1,$num=2) {
+  global $langlen;
+  if (isHorizontal($side)) {
+    return "
+      l ".$way*($len - $num*$langlen)*.3.",0
+      ".maketongue("horizontal", -$way)."
+      l ".$way*($len - $num*$langlen)*.4.",0
+      ".maketongue("horizontal", -$way)."
+      l ".$way*($len - $num*$langlen)*.3.",0
+    ";
+  } else {
+    return "
+      l 0,".$way*($len- $num*$langlen)*.3."
+      ".maketongue("vertical", $way)."
+      l 0,".$way*($len- $num*$langlen)*.4."
+      ".maketongue("vertical", $way)."
+      l 0,".$way*($len- $num*$langlen)*.3."
+    ";
+  }
+}
+
+function makeHoledSide($len,$side="horizontal", $way=1, $num=2) {
+  global $langlen, $langhei,$mat;
+  if (isHorizontal($side)) {
+    if ($way==1) {
+      return "
+	l ".$len.",0
+	m ".-$langlen.",".-$mat."
+	m ".(($len-$num*$langlen)*-.3).",".$langhei."
+	".makehole("horizontal")."
+	m ".($len-$num*$langlen)*-.4.",0
+	m ".-$langlen.",0
+	".makehole("horizontal")."
+	m ".($len-$num*$langlen)*.7.",".$mat."
+	m ".(2*$langlen*$way).",".-$langhei."
+      ";
+    } else {
+      return "
+	l ".-$len.",0
+	m ".($len-$num*$langlen)*.3.",".-$langhei."
+	".makehole("horizontal")."
+	m ".($len-$num*$langlen)*.4.",0
+	m ".$langlen.",0
+	".makehole("horizontal")."
+	m ".($len-$num*$langlen)*-.7.",".$langhei."
+	m ".-$langlen.",0
+      ";
+    }
+  } else {
+    if ($way==1) {
+      return "
+	l 0,".$len."
+	m ".-$langhei.",".($len-$num*$langlen)*-.3."
+	m 0,".-$langlen."
+	".makehole("vertical")."
+	m 0,".($len-$num*$langlen)*-.4."
+	m 0,".-$langlen."
+	".makehole("vertical")."
+	m $langhei,".($len-$num*$langlen)*.7."
+	m 0,".(2*$langlen)."
+      ";
+    } else {
+      return "
+	l 0,".-$len."
+	m ".$langhei.",".($len-$num*$langlen)*.3."
+	m ".-$mat.",0
+	".makehole("vertical")."
+	m 0,".($len-$num*$langlen)*.4."
+	m 0,".$langlen."
+	".makehole("vertical")."
+	m ".-$langhei.",".($len-$num*$langlen)*-.7."
+	m ".$mat.",".-$langlen."
+      ";
+
+    }
+
+  }
+}
+
 function makeFace($face,$x,$y,$l1,$l2) {
-  global $langlen,$langhei,$mat;
-    $roomX = ($l1-2*$langlen)/$l1;
-    $roomY = ($l2-2*$langlen)/$l2;
   if ($face=="c1") {
     echo "<path d='M ".$x.",".$y."
-      l ".$l1.",0 l 0,".($l2*$roomY*.3)."
-      ".maketongue("vertical",1)."
-      l 0,".($l2*$roomY*.4)."
-      ".maketongue("vertical",1)."
-      l 0,".($l2*$roomY*.3)." l ".-($l1*$roomX*.3).",0
-      ".maketongue("horizontal",1)."
-      l ".-($l1*$roomX*.4).",0
-      ".maketongue("horizontal",1)."
-      l ".-($l1*$roomX*.3).",0 l 0,".-($l2*$roomY*.3)."
-      ".maketongue("vertical",-1)."
-      l 0,".-($l2*$roomY*.4)."
-      ".maketongue("vertical",-1)."
-      L ".$x.",".$y."
-      ' stroke='black' stroke-width='1' fill='none' \n/>";
+      l ".$l1.",0 
+      ".makeTonguedSide($l2,"vertical",1)."
+      ".makeTonguedSide($l1,"horizontal",-1)."
+      ".makeTonguedSide($l2,"vertical",-1)."
+      ' stroke='black' stroke-width='.3' fill='none' \n/>";
   } else if ($face=="c2") {
     echo "<path d='M ".$x.",".$y."
       l ".$l1.",0
-      l 0,".$l2."
-      l ".-(($l1*$roomX)*.3).",0
-      ".maketongue("horizontal",1)."
-      l ".-(($l1*$roomX)*.4).",0
-      ".maketongue("horizontal",1)."
-      l ".-(($l1*$roomX)*.3).",0
-      l 0,".-$l2."
-      M ".($x+($l1*$roomX)*.1).",".($y+($l2*$roomY)*.3)."
-      ".makehole("vertical")."
-      M ".($x+$l1-($l1*$roomX)*.1-$mat).",".($y+($l2*$roomY)*.3)."
-      ".makehole("vertical")."
-      M ".($x+($l1*$roomX)*.1).",".($y+$l2-($l2*$roomY)*.3-$langlen)."
-      ".makehole("vertical")."
-      M ".($x+$l1-($l1*$roomX)*.1-$mat).",".($y+$l2-($l2*$roomY)*.3-$langlen)."
-      ".makehole("vertical")."
-      ' stroke='black' stroke-width='1' fill='none' \n/>";
+      ".makeHoledSide($l2,"vertical",1)."
+      ".makeTonguedSide($l1,"horizontal",-1)."
+      ".makeHoledSide($l2,"vertical",-1)."
+      ' stroke='black' stroke-width='.3' fill='none' \n/>";
   } else {
     echo "<path d='M ".$x.",".$y."
-      l ".$l1.",0
-      l 0,".$l2."
-      l ".-$l1.",0
-      l 0,".-$l2."
-      M ".($x+($l1*$roomX)*.1).",".($y+($l2*$roomY)*.3)."
-      ".makehole("vertical")."
-      M ".($x+$l1-($l1*$roomX)*.1-$mat).",".($y+($l2*$roomY)*.3)."
-      ".makehole("vertical")."
-      M ".($x+($l1*$roomX)*.1).",".($y+$l2-($l2*$roomY)*.3-$langlen)."
-      ".makehole("vertical")."
-      M ".($x+$l1-($l1*$roomX)*.1-$mat).",".($y+$l2-($l2*$roomY)*.3-$langlen)."
-      ".makehole("vertical")."
-      M ".($x+($l1*$roomX)*.3).",".($y+($l2*$roomY)*.1)."
-      ".makehole("horizontal")."
-      M ".($x+$l1-($l1*$roomX)*.3-$langlen).",".($y+($l2*$roomY)*.1)."
-      ".makehole("horizontal")."
-      M ".($x+($l1*$roomX)*.3).",".($y+$l2-($l2*$roomY)*.1-$mat)."
-      ".makehole("horizontal")."
-      M ".($x+$l1-($l1*$roomX)*.3-$langlen).",".($y+$l2-($l2*$roomY)*.1-$mat)."
-      ".makehole("horizontal")."
-
-      ' stroke='black' stroke-width='1' fill='none' \n/>";
+      ".makeHoledSide($l1,"horizontal",1)."
+      ".makeHoledSide($l2,"vertical",1)."
+      ".makeHoledSide($l1,"horizontal", -1)."
+      ".makeHoledSide($l2,"vertical",-1)."
+      ' stroke='black' stroke-width='.3' fill='none' \n/>";
   }
 }
 ?>
@@ -164,7 +227,7 @@ function makeFace($face,$x,$y,$l1,$l2) {
 						<input type="text" name="Thickness" <?php if (isset($_GET['Thickness'])) { echo "value=".$mat*10; } ?>><br></div>
 						<div class="input"><label for="DowelThickness">Dowel Thickness (mm)</label><br>
 						<input type="text" name="DowelThickness" <?php if (isset($_GET['Height'])) { echo "value=".$dowel*10; } ?>><br></div>
-						<div class="input"><input type="checkbox" name="drillMode" id="drillMode" <?php if (isset($_GET['drillMode'])) {echo "checked";} ?>><label for="drillMode">Are you planning to use a CNC?</label><br>
+						<div class="input"><input type="checkbox" name="drillMode" id="drillMode" <?php if (isset($_GET['drillMode'])) {echo "checked";} ?>><label for="drillMode">CNC mode</label><br>
 						<div id="option"><label for="BitSize">Bit Size (mm)</label><br>
 						<input type="text" name="BitSize" <?php if (isset($_GET['BitSize'])) { echo "value=".$bsize; } ?>><br></div></div>
 						<div </div>
@@ -174,7 +237,7 @@ function makeFace($face,$x,$y,$l1,$l2) {
 				<div id="preview">
 					
                                   <svg width="100%" height="100%">
-                                    <g transform="scale(3)">
+                                    <g transform="scale(5)">
 <?php
 if (isset($_GET['gen'])) {
   $i=0;
@@ -182,11 +245,7 @@ if (isset($_GET['gen'])) {
     makeFace($c1,$spacing,$spacing,$order[$c1][0],$order[$c1][1]);
     for ($i=0;$i<2;$i++) {
       makeFace($c2,$spacing*2 + $order[$c1][0],$spacing+$i*($order[$c2][1]+$spacing),$order[$c2][0],$order[$c2][1]);
-      if (2*($order[$c2][1]+$spacing) >= (2*($order[$c1][1]+$spacing))) {
-        makeFace($c3,$spacing,$spacing,$order[$c3][0],$order[$c3][1]);
-      } else {
-        makeFace($c3,$spacing*2 + $order[$c1][0],$spacing+2*($order[$c2][1]+$spacing)+$i*($order[$c3][1]+$spacing),$order[$c3][0],$order[$c3][1]);
-        }
+      makeFace($c3,$spacing,2*($spacing+$spacing*$i)+$order[$c1][1],$order[$c3][0],$order[$c3][1]);
     }
   
   } else if ($c2 == "bot") {
@@ -202,13 +261,9 @@ if (isset($_GET['gen'])) {
   } else {
     for ($i=0;$i<2;$i++) {
       makeFace($c1,$spacing,$spacing+($spacing+$order[$c1][1])*$i,$order[$c1][0],$order[$c1][1]);
-      makeFace($c2,$order[$c1][0]+2*$spacing,$spacing + ($order[$c2][1]+$spacing)*$i,$order[$c2][0],$order[$c2][1]);
+      makeFace($c2,$order[$c1][0]+2*$spacing,$spacing+($spacing+$order[$c2][1])*$i,$order[$c2][0],$order[$c2][1]);
     }
-    if (2*($order[$c2][1]+$spacing) >= (2*($order[$c1][1]+$spacing))) {
-      makeFace($c3,$spacing,$spacing+($order[$c1][0]+$spacing)*2,$order[$c3][0],$order[$c3][1]);
-    } else {
-      makeFace($c3,$order[$c1][0]+2*$spacing,$spacing+2*($order[$c2][1]+$spacing),$order[$c3][0],$order[$c3][1]);
-    }
+    makeFace($c3,$spacing,$spacing+($order[$c1][1]+$spacing)*2,$order[$c3][0],$order[$c3][1]);
   }
 }
 ?>
