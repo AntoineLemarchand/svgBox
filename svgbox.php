@@ -3,7 +3,6 @@
 <?php
 /*
  TODO
- - download button
  - cleanup frontend
  */
 include "./scripts/functions.php";
@@ -44,6 +43,7 @@ $c3=array_keys($order)[2];
 
 if (isset($_GET["dl"])) {
   downloadSvg();
+  session_destroy();
 }
 ?>
 
