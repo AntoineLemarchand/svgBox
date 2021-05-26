@@ -78,7 +78,7 @@ input[type="submit"]:nth-child(2n+1) {
   visibility: visible;
 }
 
-#preview {
+#preview, svg {
   height: 100%;
   width: 100%;
 }
