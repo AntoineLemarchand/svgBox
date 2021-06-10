@@ -8,7 +8,7 @@ Simply enter all the needed parameters and your svg is ready !
 
 ## Tech 
 
-* frontend : HTML/CSS
+* Frontend : HTML/CSS
 * Backend : PHP and a homemade 2d space optimization algorithm
 
 ### How its made
