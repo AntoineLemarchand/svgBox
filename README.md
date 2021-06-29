@@ -1,6 +1,6 @@
 # svgBox: Your own box in seconds !
 
-[live demo](https://antoinelemarchand.xyz/projects/svgbox/svgbox.php)
+[Live demo](https://antoinelemarchand.xyz/projects/svgbox/svgbox.php)
 
 svgBox is a portfolio project that generate svg template to craft boxes !
 
